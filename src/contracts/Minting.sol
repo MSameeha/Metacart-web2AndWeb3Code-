@@ -1,21 +1,18 @@
 // SPDX-License-Identifier: MIT
-pragma solidity >=0.4.22 <0.9.0;
+pragma solidity ^0.5.0;
 
-// import "./ERC721Full.sol";
-import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
+import "./ERC721Full.sol";
 
-contract Minting is ERC721 {
-  string[] public nfts;
-  mapping(string => bool) _nftExists;
+contract Minting is ERC721Full {
+    string[] public nfts;
+    mapping(string => bool) _nftExists;
 
-  abstract constructor() ERC721("Minting", "MINTNFT") public {
-  }
+    constructor() public ERC721Full("Minting", "MINTING") {}
 
-  function mint(string memory _nft) public {
-    require(!_nftExists[_nft]);
-    uint _id = nfts.push(_nft);
-    _mint(msg.sender, _id);
-    _nftExists[_nft] = true;
-  }
-
+    function mint(string memory _nft) public {
+        require(!_nftExists[_nft]);
+        uint256 _id = nfts.push(_nft);
+        _mint(msg.sender, _id);
+        _nftExists[_nft] = true;
+    }
 }

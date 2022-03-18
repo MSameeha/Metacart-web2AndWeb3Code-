@@ -1,22 +1,81 @@
 /* eslint-disable react/prop-types */
 /* eslint-disable react/button-has-type */
-import React, { useState, useContext } from 'react';
+import React, { useState, useContext, useEffect } from 'react';
 import { create } from 'ipfs-http-client';
+import firebase from 'firebase/app';
 import useUser from '../../hooks/use-user';
 import UserContext from '../../context/user';
-// import FirebaseContext from '../../context/firebase';
-import { postUserPhotos } from '../../services/firebase';
+// import { postUserPhotos } from '../../services/firebase';
+import Web3 from 'web3';
+import Minting from '../../abis/Minting.json';
+import Tip from '../../abis/Tip.json';
 
 const client = create('https://ipfs.infura.io:5001/api/v0');
 
 export default function CreatePost({ setShowModal, showModal }) {
   const [file, setFile] = useState(null);
   const [urlArr, setUrlArr] = useState('');
-  const [hash, sethash] = useState('');
+  const [hash, setHash] = useState('');
+  const [caption, setcaption] = useState('');
+  // const [ likes, setlikes ] = useState([]);
   const { user: loggedInUser } = useContext(UserContext);
   const { user } = useUser(loggedInUser?.uid);
   const [basePrice, setbasePrice] = useState(0);
-  // const { firebase, FieldValue } = useContext(FirebaseContext);
+const [acc,setAcc] = useState(null);
+  const [mintt, setMintt] = useState(null);
+  const [tipp,setTipp] = useState(null);
+  const [nfts, setNfts] = useState([]);
+  const [totSupply, setTotSupply] = useState(0);
+  const [loading, setLoading] = useState(false);
+
+useEffect( async() => {
+    await loadWeb3();
+    await loadBlockchainData();
+ }, []);
+
+
+ const loadWeb3 = async ()=> {
+  if (window.ethereum) {
+    window.web3 = new Web3(window.ethereum)
+    await window.ethereum.enable()
+  }
+  else if (window.web3) {
+    window.web3 = new Web3(window.web3.currentProvider)
+  }
+  else {
+    window.alert('Non-Ethereum browser detected. You should consider trying MetaMask!')
+  }
+}
+
+const loadBlockchainData = async() =>{
+  const web3 = window.web3
+  // Load account
+  const accounts = await web3.eth.getAccounts()
+  setAcc(accounts[0])
+  // Network ID
+  const networkId = await web3.eth.net.getId()
+  const networkData = Tip.networks[networkId]
+  const netData = Minting.networks[networkId]
+  if(networkData && netData) {
+    const tip = new web3.eth.Contract(Tip.abi, networkData.address)
+    const mint = new web3.eth.Contract(Minting.abi, networkData.address)
+    setTipp(tip)
+    setMintt(mint)
+  }else{
+    console.log("Contract not deployed");
+  }
+}
+
+const mint = (nft) => {
+  mintt.methods.mint(nft).send({ from: acc })
+  .once('receipt', (receipt) => {
+    setNfts( (nfts) => [...nfts, nft] );
+  })
+}
+
+  const onchangeCaption = (e) => {
+    setcaption(e.target.value);
+  };
   const onchange = (e) => {
     setbasePrice(e.target.value);
   };
@@ -35,29 +94,53 @@ export default function CreatePost({ setShowModal, showModal }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
     let url = '';
+    let hashh = '';
 
     try {
       const created = await client.add(file);
-      console.log(created);
       url = `https://ipfs.io/ipfs/${created.path}`;
-      sethash(created.path);
-      console.log(created.path);
-      console.log(url);
-      console.log(hash);
+      setHash(created.path);
+      hashh = created.path;
       setUrlArr((prev) => [...prev, url]);
     } catch (error) {
-      console.log(error.message);
+      console.log();
     }
-    const post = {
-      userId: user,
-      photoId: '1',
-      dateCreated: Date.now(),
-      caption: 'Hey, this is new final latest sameeha.2.0',
-      imageSrc: url,
-      price: 1,
-      basePrice
-    };
-    postUserPhotos(user.uid, post);
+    const result = await firebase
+      .firestore()
+      .collection('photos')
+      .add({
+        userId: user.userId,
+        imageSrc: url,
+        price: 1,
+        basePrice,
+        dateCreated: new Date(Date.now()).toUTCString(),
+        caption,
+        likes: []
+      })
+      .then(async (docRef) => {
+	      setLoading(true);
+      	//mint(hash);
+        console.log(hashh);
+        console.log(docRef.id);
+      	tipp.methods.uploadImage(hashh,docRef.id).send({ from: acc }).on('transactionHash', (hash) => {
+      //	tipp.methods.images.map((img) => console.log(img));
+          console.log(tipp.methods.images(docRef.id).call());
+        setLoading(false);
+	})
+        await firebase.firestore().collection('photos').doc(docRef.id).update({
+          photoId: docRef.id
+        });
+        await firebase
+          .firestore()
+          .collection('users')
+          .doc(user.docId)
+          .update({
+            photos: firebase.firestore.FieldValue.arrayUnion(docRef.id)
+          });
+      })
+      .catch((error) => {
+        console.error('Error writing document: ', error);
+      });
   };
   return (
     <>
@@ -90,14 +173,16 @@ export default function CreatePost({ setShowModal, showModal }) {
                     />
                     <button>Upload</button>
                     <input
-                      aria-label="Enter your email address"
+                      aria-label="Enter your caption"
                       type="text"
                       placeholder="Enter Caption"
                       className="text-sm text-gray-base w-full mr-3 py-5 px-4 h-2 border border-gray-primary rounded mb-2"
+                      onChange={onchangeCaption}
                     />
                     <input
-                      aria-label="Enter your email address"
+                      aria-label="Enter your base value"
                       type="text"
+                      required
                       placeholder="Enter base value"
                       className="text-sm text-gray-base w-full mr-3 py-5 px-4 h-2 border border-gray-primary rounded mb-2"
                       onChange={onchange}
@@ -112,6 +197,16 @@ export default function CreatePost({ setShowModal, showModal }) {
                     onClick={() => setShowModal(false)}
                   >
                     Close
+                  </button>
+                  <button
+                    className="text-red-500 background-transparent font-bold uppercase px-6 py-2 text-sm outline-none focus:outline-none mr-1 mb-1 ease-linear transition-all duration-150"
+                    type="button"
+                    onClick={() => {
+                      // onchange();
+                      setShowModal(false);
+                    }}
+                  >
+                    Post
                   </button>
                 </div>
               </div>

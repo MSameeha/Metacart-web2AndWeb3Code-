@@ -40,7 +40,8 @@ export default function SignUp() {
           emailAddress: emailAddress.toLowerCase(),
           following: [],
           followers: [],
-          dateCreated: Date.now()
+          dateCreated: Date.now(),
+          photos: []
         });
 
         history.push(ROUTES.DASHBOARD);

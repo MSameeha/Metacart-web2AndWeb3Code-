@@ -101,7 +101,7 @@ export async function getPhotos(userId, following) {
   const photosWithUserDetails = await Promise.all(
     userFollowedPhotos.map(async (photo) => {
       let userLikedPhoto = false;
-      if (photo.likes.includes(userId)) {
+      if (photo.likes.length > 0 && photo.likes.includes(userId)) {
         userLikedPhoto = true;
       }
       // photo.userId = 2
@@ -111,7 +111,6 @@ export async function getPhotos(userId, following) {
       return { username, ...photo, userLikedPhoto };
     })
   );
-
   return photosWithUserDetails;
 }
 
@@ -129,13 +128,22 @@ export async function getUserPhotosByUserId(userId) {
   return photos;
 }
 
-export async function postUserPhotos(userId, post) {
+// function not used
+export async function postUserPhotos(useruid, userId, date, caption, url, price, basePrice) {
   await firebase
     .firestore()
     .collection('photos')
-    .add(post)
-    .then(() => {
+    .add({
+      userId,
+      imageSrc: url,
+      price,
+      basePrice,
+      dateCreated: date,
+      caption
+    })
+    .then((docRef) => {
       console.log('Document successfully written!');
+      return docRef.id;
     })
     .catch((error) => {
       console.error('Error writing document: ', error);
