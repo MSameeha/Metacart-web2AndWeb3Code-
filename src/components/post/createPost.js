@@ -15,20 +15,20 @@ const client = create('https://ipfs.infura.io:5001/api/v0');
 export default function CreatePost({ setShowModal, showModal }) {
   const [file, setFile] = useState(null);
   const [urlArr, setUrlArr] = useState('');
-  const [hash, setHash] = useState('');
+  const [hash, sethash] = useState('');
   const [caption, setcaption] = useState('');
   // const [ likes, setlikes ] = useState([]);
   const { user: loggedInUser } = useContext(UserContext);
   const { user } = useUser(loggedInUser?.uid);
   const [basePrice, setbasePrice] = useState(0);
-const [acc,setAcc] = useState(null);
+  const [acc,setAcc] = useState(null);
   const [mintt, setMintt] = useState(null);
   const [tipp,setTipp] = useState(null);
   const [nfts, setNfts] = useState([]);
   const [totSupply, setTotSupply] = useState(0);
   const [loading, setLoading] = useState(false);
 
-useEffect( async() => {
+  useEffect( async() => {
     await loadWeb3();
     await loadBlockchainData();
  }, []);
@@ -58,7 +58,7 @@ const loadBlockchainData = async() =>{
   const netData = Minting.networks[networkId]
   if(networkData && netData) {
     const tip = new web3.eth.Contract(Tip.abi, networkData.address)
-    const mint = new web3.eth.Contract(Minting.abi, networkData.address)
+    const mint = new web3.eth.Contract(Minting.abi, netData.address)
     setTipp(tip)
     setMintt(mint)
   }else{
@@ -99,7 +99,7 @@ const mint = (nft) => {
     try {
       const created = await client.add(file);
       url = `https://ipfs.io/ipfs/${created.path}`;
-      setHash(created.path);
+      sethash(created.path);
       hashh = created.path;
       setUrlArr((prev) => [...prev, url]);
     } catch (error) {
@@ -118,16 +118,15 @@ const mint = (nft) => {
         likes: []
       })
       .then(async (docRef) => {
-	      setLoading(true);
-      	//mint(hash);
+	setLoading(true);
+      	mint(hashh);
         console.log(hashh);
         console.log(docRef.id);
       	tipp.methods.uploadImage(hashh,docRef.id).send({ from: acc }).on('transactionHash', (hash) => {
-      //	tipp.methods.images.map((img) => console.log(img));
           console.log(tipp.methods.images(docRef.id).call());
-        setLoading(false);
-	})
+        setLoading(false); })
         await firebase.firestore().collection('photos').doc(docRef.id).update({
+          // call
           photoId: docRef.id
         });
         await firebase

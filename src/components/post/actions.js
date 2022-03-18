@@ -16,6 +16,7 @@ export default function Actions({ docId, totalLikes, likedPhoto, handleFocus, ba
   const { firebase, FieldValue } = useContext(FirebaseContext);
   const [acc,setAcc] = useState(null);
   const [tipp,setTipp] = useState(null);
+  const [amt,setAmt] = useState('');
 
   useEffect( async() => {
     await loadWeb3();
@@ -45,8 +46,11 @@ const loadBlockchainData = async() =>{
   const networkId = await web3.eth.net.getId()
   const networkData = Tip.networks[networkId]
   if(networkData) {
-    const tip = new web3.eth.Contract(Tip.abi, networkData.address)
+    const tip = new web3.eth.Contract(Tip.abi, networkData.address);
     setTipp(tip)
+    const img = await tip.methods.images(docId).call()
+    console.log(img);
+    setAmt(img.tipAmount);
   }else{
     console.log("Contract not deployed");
   }
@@ -71,6 +75,7 @@ const loadBlockchainData = async() =>{
     // Add price to firestore
     // await firebase.firestore.collection('photos').update({ F });
   };
+
 
   return (
     <>
@@ -105,15 +110,19 @@ const loadBlockchainData = async() =>{
                             let tipAmount = window.web3.utils.toWei('0.1', 'Ether')
                             console.log(docId, tipAmount)
                             const image = await tipp.methods.images(docId).call()
-                            console.log(image.tipAmount);
+                            setAmt(image.tipAmount);
                             if(image.id != "") {
                               tipp.methods.tipImageOwner(docId).send({ from: acc, value: tipAmount }).on('transactionHash', (hash) => {
                                 // time pass
                               })
                             }
                             else {console.log("Image doesn't exist in the Blockchain");}
+                            console.log(amt);
                           }}
                         > TIP 0.1 ETH </button>
+                        {/* <small className="float-left mt-1 text-muted">
+                          TIPS: {window.web3.utils.fromWei(amt.toString(), 'Ether')} ETH
+                        </small> */}
         </div>
       </div>
       <div className="p-4 py-0">
