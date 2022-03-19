@@ -56,6 +56,20 @@ const loadBlockchainData = async() =>{
   }
 }
 
+  const tipAmnt = async (event) => {
+    let tipAmount = window.web3.utils.toWei('0.1', 'Ether')
+    console.log(docId, tipAmount)
+    const image = await tipp.methods.images(docId).call()
+    setAmt(image.tipAmount);
+    if(image.id !== "") {
+      tipp.methods.tipImageOwner(docId).send({ from: acc, value: tipAmount }).on('transactionHash', (hash) => { });
+    }
+    else {
+      console.log("Image doesn't exist in the Blockchain");
+    }
+    console.log(amt);
+}
+
   const handleToggleLiked = async () => {
     setToggleLiked((toggleLiked) => !toggleLiked);
 
@@ -106,20 +120,7 @@ const loadBlockchainData = async() =>{
           </svg>
           {/* price details */}
           {<p className="font-bold">Price: ${currprice}</p>}
-		<button onClick={async(event) => {
-                            let tipAmount = window.web3.utils.toWei('0.1', 'Ether')
-                            console.log(docId, tipAmount)
-                            const image = await tipp.methods.images(docId).call()
-                            setAmt(image.tipAmount);
-                            if(image.id != "") {
-                              tipp.methods.tipImageOwner(docId).send({ from: acc, value: tipAmount }).on('transactionHash', (hash) => {
-                                // time pass
-                              })
-                            }
-                            else {console.log("Image doesn't exist in the Blockchain");}
-                            console.log(amt);
-                          }}
-                        > TIP 0.1 ETH </button>
+          <button onClick={tipAmnt}> TIP 0.1 ETH </button>
                         {/* <small className="float-left mt-1 text-muted">
                           TIPS: {window.web3.utils.fromWei(amt.toString(), 'Ether')} ETH
                         </small> */}
